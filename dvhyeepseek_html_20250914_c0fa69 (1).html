@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur de Facture Simplifié</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #3b82f6;
+            --accent-color: #ef4444;
+            --light-color: #f8fafc;
+            --dark-color: #1e293b;
+            --success-color: #10b981;
+            --gray-color: #64748b;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f1f5f9;
+            color: #334155;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 24px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        header::before {
+            content: "";
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            background: rgba(255, 255, 255, 0.08);
+            transform: rotate(-2deg);
+            z-index: 0;
+        }
+        
+        h1 {
+            margin-bottom: 12px;
+            font-size: 1.8rem;
+            position: relative;
+            z-index: 1;
+            font-weight: 700;
+        }
+        
+        header p {
+            font-size: 1rem;
+            position: relative;
+            z-index: 1;
+            opacity: 0.9;
+        }
+        
+        .app-container {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        
+        .input-section {
+            flex: 1;
+            min-width: 320px;
+            padding: 24px;
+            background: var(--light-color);
+        }
+        
+        .preview-section {
+            flex: 1;
+            min-width: 320px;
+            padding: 24px;
+            border-left: 1px solid #e2e8f0;
+            background: #fafafa;
+        }
+        
+        .section-title {
+            color: var(--primary-color);
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--secondary-color);
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: var(--dark-color);
+            font-size: 0.9rem;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.2s;
+            background: white;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+        
+        button {
+            padding: 12px 20px;
+            background: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.2s;
+            margin-top: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        button:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .btn-danger {
+            background: var(--accent-color);
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+        }
+        
+        .btn-success {
+            background: var(--success-color);
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+        }
+        
+        .product-list {
+            margin: 16px 0;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            background: white;
+        }
+        
+        .product-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+        
+        .product-item:hover {
+            background: #f8fafc;
+        }
+        
+        .product-item:last-child {
+            border-bottom: none;
+        }
+        
+        .product-item button {
+            width: auto;
+            padding: 6px 12px;
+            margin: 0;
+            font-size: 0.8rem;
+        }
+        
+        .invoice {
+            background: white;
+            padding: 28px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+            font-size: 0.9rem;
+            border-radius: 10px;
+        }
+        
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+        
+        .company-info, .client-info {
+            margin-bottom: 16px;
+        }
+        
+        .invoice-title {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        
+        .invoice-title h1 {
+            color: var(--primary-color);
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+        
+        .invoice-details {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        
+        .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 24px;
+            font-size: 0.85rem;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 0 0 1px #e2e8f0;
+        }
+        
+        .invoice-table th, .invoice-table td {
+            border: 1px solid #e2e8f0;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        .invoice-table th {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 600;
+        }
+        
+        .invoice-table tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+        
+        .invoice-totals {
+            width: 100%;
+            margin-bottom: 24px;
+            background: #f8fafc;
+            padding: 16px;
+            border-radius: 8px;
+        }
+        
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+        }
+        
+        .total-row.grand-total {
+            font-weight: bold;
+            font-size: 1.1em;
+            border-top: 2px solid var(--primary-color);
+            margin-top: 10px;
+            padding-top: 10px;
+            color: var(--primary-color);
+        }
+        
+        .payment-info {
+            margin-bottom: 20px;
+            padding: 16px;
+            background: #f8fafc;
+            border-radius: 8px;
+        }
+        
+        .invoice-footer {
+            margin-top: 28px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--gray-color);
+        }
+        
+        .actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        
+        .actions button {
+            flex: 1;
+        }
+        
+        .logo-upload {
+            margin-bottom: 16px;
+        }
+        
+        .logo-preview {
+            max-width: 100px;
+            max-height: 100px;
+            margin-top: 10px;
+            display: none;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .forceconnect-footer {
+            font-size: 0.8em;
+            color: var(--secondary-color);
+            margin-top: 10px;
+            font-weight: 600;
+            text-align: center;
+            padding: 16px;
+            background: #f8fafc;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 5px;
+        }
+        
+        .badge-primary {
+            background: var(--secondary-color);
+            color: white;
+        }
+        
+        .badge-danger {
+            background: var(--accent-color);
+            color: white;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .notification.success {
+            background: var(--success-color);
+        }
+        
+        .notification.error {
+            background: var(--accent-color);
+        }
+        
+        .notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        @media (max-width: 768px) {
+            .app-container {
+                flex-direction: column;
+            }
+            
+            .preview-section {
+                border-left: none;
+                border-top: 1px solid #e2e8f0;
+            }
+            
+            .invoice-header, .invoice-details {
+                flex-direction: column;
+                gap: 16px;
+            }
+            
+            .invoice-table {
+                font-size: 0.8rem;
+            }
+            
+            .invoice-table th, .invoice-table td {
+                padding: 8px;
+            }
+            
+            header {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            .input-section, .preview-section {
+                padding: 20px;
+            }
+            
+            .actions {
+                flex-direction: column;
+            }
+        }
+        
+        /* Styles d'impression améliorés */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #invoicePreview, #invoicePreview * {
+                visibility: visible;
+            }
+            #invoicePreview {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: var(--secondary-color);
+        }
+        
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--secondary-color);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .compression-info {
+            font-size: 0.8rem;
+            color: var(--gray-color);
+            margin-top: 8px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Générateur de Facture Simplifié</h1>
+            <p>Créez des factures PDF professionnelles en quelques clics</p>
+        </header>
+        
+        <div class="app-container">
+            <div class="input-section">
+                <h2 class="section-title">Informations de l'Entreprise</h2>
+                
+                <div class="form-group logo-upload">
+                    <label for="companyLogo">Logo de l'entreprise</label>
+                    <input type="file" id="companyLogo" accept="image/*">
+                    <img id="logoPreview" class="logo-preview" alt="Aperçu du logo">
+                    <p class="compression-info" id="logoCompressionInfo">L'image sera compressée pour réduire la taille du PDF</p>
+                </div>
+                
+                <div class="form-group">
+                    <label for="companyName">Nom de l'entreprise <span class="badge badge-primary">Requis</span></label>
+                    <input type="text" id="companyName" required placeholder="Ex: Tech Solutions SARL">
+                </div>
+                
+                <div class="form-group">
+                    <label for="companyPhone">Téléphone <span class="badge badge-primary">Requis</span></label>
+                    <input type="text" id="companyPhone" required placeholder="Ex: +225 07 07 12 34 56">
+                </div>
+                
+                <div class="form-group">
+                    <label for="companyEmail">Email</label>
+                    <input type="email" id="companyEmail" placeholder="Ex: contact@example.com">
+                </div>
+                
+                <div class="form-group">
+                    <label for="companyWebsite">Site Web</label>
+                    <input type="url" id="companyWebsite" placeholder="Ex: https://www.example.com">
+                </div>
+                
+                <h2 class="section-title">Informations du Client</h2>
+                
+                <div class="form-group">
+                    <label for="clientName">Nom complet du client <span class="badge badge-primary">Requis</span></label>
+                    <input type="text" id="clientName" required placeholder="Ex: Jean Dupont">
+                </div>
+                
+                <h2 class="section-title">Détails de la Facture</h2>
+                
+                <div class="form-group">
+                    <label for="invoiceDate">Date de la facture <span class="badge badge-primary">Requis</span></label>
+                    <input type="date" id="invoiceDate" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="paymentMethod">Mode de paiement</label>
+                    <select id="paymentMethod">
+                        <option value="Espèces">Espèces</option>
+                        <option value="Mobile Money">Mobile Money</option>
+                        <option value="Virement Bancaire">Virement Bancaire</option>
+                        <option value="Chèque">Chèque</option>
+                        <option value="Carte Bancaire">Carte Bancaire</option>
+                    </select>
+                </div>
+                
+                <h2 class="section-title">Ajouter des Produits</h2>
+                
+                <div class="form-group">
+                    <label for="productName">Nom du produit</label>
+                    <input type="text" id="productName" placeholder="Ex: Ordinateur Portable">
+                </div>
+                
+                <div class="form-group">
+                    <label for="productQuantity">Quantité</label>
+                    <input type="number" id="productQuantity" min="1" value="1" placeholder="Ex: 2">
+                </div>
+                
+                <div class="form-group">
+                    <label for="productPrice">Prix unitaire (FCFA)</label>
+                    <input type="number" id="productPrice" min="0" step="0.01" placeholder="Ex: 250000">
+                </div>
+                
+                <button id="addProduct" class="btn-success">Ajouter le produit</button>
+                
+                <h3 class="section-title">Produits ajoutés</h3>
+                <div id="productList" class="product-list">
+                    <p id="noProducts">Aucun produit ajouté</p>
+                </div>
+                
+                <div class="actions">
+                    <button id="generatePDF" class="btn-success">Générer le PDF</button>
+                    <button id="resetForm" class="btn-danger">Réinitialiser</button>
+                </div>
+                
+                <div class="loading" id="loadingIndicator">
+                    <div class="loading-spinner"></div>
+                    <p>Génération du PDF en cours...</p>
+                </div>
+            </div>
+            
+            <div class="preview-section">
+                <h2 class="section-title">Aperçu de la Facture</h2>
+                <div id="invoicePreview" class="invoice">
+                    <div class="invoice-header">
+                        <div class="company-info">
+                            <h3 id="previewCompanyName">Nom de l'entreprise</h3>
+                            <p id="previewCompanyPhone">Téléphone: +225 00 00 00 00 00</p>
+                            <p id="previewCompanyEmail">Email: exemple@email.com</p>
+                            <p id="previewCompanyWebsite">Site web: https://www.example.com</p>
+                        </div>
+                        <div id="previewLogoContainer"></div>
+                    </div>
+                    
+                    <div class="invoice-title">
+                        <h1>FACTURE</h1>
+                        <p id="previewInvoiceNumber">N°: FC-2023-001</p>
+                    </div>
+                    
+                    <div class="invoice-details">
+                        <div class="client-info">
+                            <h3>Client</h3>
+                            <p id="previewClientName">Nom du client</p>
+                        </div>
+                        
+                        <div class="date-info">
+                            <p><strong>Date de facturation:</strong> <span id="previewInvoiceDate">01/01/2023</span></p>
+                            <p><strong>Mode de paiement:</strong> <span id="previewPaymentMethod">Mobile Money</span></p>
+                        </div>
+                    </div>
+                    
+                    <table class="invoice-table">
+                        <thead>
+                            <tr>
+                                <th>Produit</th>
+                                <th>Quantité</th>
+                                <th>Prix unitaire</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="previewProductList">
+                            <tr>
+                                <td colspan="4" style="text-align: center;">Aucun produit ajouté</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <div class="invoice-totals">
+                        <div class="total-row">
+                            <span>Sous-total:</span>
+                            <span id="previewSubtotal">0 FCFA</span>
+                        </div>
+                        <div class="total-row">
+                            <span>TVA (0%):</span>
+                            <span id="previewTax">0 FCFA</span>
+                        </div>
+                        <div class="total-row grand-total">
+                            <span>Total:</span>
+                            <span id="previewTotal">0 FCFA</span>
+                        </div>
+                    </div>
+                    
+                    <div class="payment-info">
+                        <h3>Informations de paiement</h3>
+                        <p>Merci de régler cette facture dans les 30 jours suivant sa réception.</p>
+                    </div>
+                    
+                    <div class="invoice-footer">
+                        <p>Facture générée avec Générateur de Facture Simplifié</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="forceconnect-footer">
+            Optimisé pour garantir une taille de PDF inférieure à 1 Mo
+        </div>
+    </div>
+    
+    <div id="notification" class="notification"></div>
+    
+    <script>
+        // Initialisation des variables globales
+        let products = [];
+        let invoiceNumber = generateInvoiceNumber();
+        let logoDataUrl = null;
+        
+        // Initialisation des éléments DOM
+        document.addEventListener('DOMContentLoaded', function() {
+            // Définir la date du jour comme date de facture par défaut
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('invoiceDate').value = today;
+            updatePreviewInvoiceDate(today);
+            
+            // Générer un numéro de facture
+            updatePreviewInvoiceNumber();
+            
+            // Événements pour les champs de formulaire
+            document.getElementById('companyName').addEventListener('input', function() {
+                document.getElementById('previewCompanyName').textContent = this.value || 'Nom de l\'entreprise';
+            });
+            
+            document.getElementById('companyPhone').addEventListener('input', function() {
+                document.getElementById('previewCompanyPhone').textContent = 'Téléphone: ' + (this.value || '+225 00 00 00 00 00');
+            });
+            
+            document.getElementById('companyEmail').addEventListener('input', function() {
+                document.getElementById('previewCompanyEmail').textContent = 'Email: ' + (this.value || 'exemple@email.com');
+            });
+            
+            document.getElementById('companyWebsite').addEventListener('input', function() {
+                document.getElementById('previewCompanyWebsite').textContent = 'Site web: ' + (this.value || 'https://www.example.com');
+            });
+            
+            document.getElementById('clientName').addEventListener('input', function() {
+                document.getElementById('previewClientName').textContent = this.value || 'Nom du client';
+            });
+            
+            document.getElementById('invoiceDate').addEventListener('change', function() {
+                updatePreviewInvoiceDate(this.value);
+            });
+            
+            document.getElementById('paymentMethod').addEventListener('change', function() {
+                document.getElementById('previewPaymentMethod').textContent = this.value;
+            });
+            
+            document.getElementById('companyLogo').addEventListener('change', function(e) {
+                handleLogoUpload(e.target.files[0]);
+            });
+            
+            document.getElementById('addProduct').addEventListener('click', function() {
+                addProduct();
+            });
+            
+            document.getElementById('generatePDF').addEventListener('click', function() {
+                generatePDF();
+            });
+            
+            document.getElementById('resetForm').addEventListener('click', function() {
+                resetForm();
+            });
+        });
+        
+        // Fonction pour gérer l'upload du logo
+        function handleLogoUpload(file) {
+            if (!file) return;
+            
+            const reader = new FileReader();
+            const maxSize = 500 * 1024; // 500KB max pour éviter les images trop lourdes
+            
+            if (file.size > maxSize) {
+                showNotification('L\'image est trop lourde. Veuillez choisir une image de moins de 500KB.', 'error');
+                return;
+            }
+            
+            document.getElementById('logoCompressionInfo').style.display = 'block';
+            
+            reader.onload = function(e) {
+                // Compression de l'image pour réduire la taille
+                compressImage(e.target.result, 0.7, function(compressedDataUrl) {
+                    logoDataUrl = compressedDataUrl;
+                    const preview = document.getElementById('logoPreview');
+                    preview.src = compressedDataUrl;
+                    preview.style.display = 'block';
+                    
+                    // Mettre à jour l'aperçu
+                    const logoContainer = document.getElementById('previewLogoContainer');
+                    logoContainer.innerHTML = '';
+                    const logoImg = document.createElement('img');
+                    logoImg.src = compressedDataUrl;
+                    logoImg.style.maxWidth = '120px';
+                    logoImg.style.maxHeight = '120px';
+                    logoContainer.appendChild(logoImg);
+                });
+            };
+            
+            reader.readAsDataURL(file);
+        }
+        
+        // Fonction de compression d'image
+        function compressImage(dataUrl, quality, callback) {
+            const img = new Image();
+            img.src = dataUrl;
+            
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // Réduire la taille de l'image si nécessaire
+                let width = img.width;
+                let height = img.height;
+                const maxDimension = 800; // Dimension maximale
+                
+                if (width > height && width > maxDimension) {
+                    height = Math.round((height * maxDimension) / width);
+                    width = maxDimension;
+                } else if (height > maxDimension) {
+                    width = Math.round((width * maxDimension) / height);
+                    height = maxDimension;
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Convertir en JPEG pour une meilleure compression
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                callback(compressedDataUrl);
+            };
+        }
+        
+        // Fonction pour ajouter un produit
+        function addProduct() {
+            const name = document.getElementById('productName').value;
+            const quantity = parseInt(document.getElementById('productQuantity').value);
+            const price = parseFloat(document.getElementById('productPrice').value);
+            
+            if (!name || isNaN(quantity) || isNaN(price)) {
+                showNotification('Veuillez remplir tous les champs du produit.', 'error');
+                return;
+            }
+            
+            const product = {
+                name,
+                quantity,
+                price,
+                total: quantity * price
+            };
+            
+            products.push(product);
+            updateProductList();
+            updatePreviewProductList();
+            calculateTotals();
+            
+            // Réinitialiser les champs de produit
+            document.getElementById('productName').value = '';
+            document.getElementById('productQuantity').value = '1';
+            document.getElementById('productPrice').value = '';
+            
+            showNotification('Produit ajouté avec succès.', 'success');
+        }
+        
+        // Fonction pour mettre à jour la liste des produits
+        function updateProductList() {
+            const productList = document.getElementById('productList');
+            const noProducts = document.getElementById('noProducts');
+            
+            if (products.length === 0) {
+                noProducts.style.display = 'block';
+                productList.innerHTML = '';
+                productList.appendChild(noProducts);
+                return;
+            }
+            
+            noProducts.style.display = 'none';
+            productList.innerHTML = '';
+            
+            products.forEach((product, index) => {
+                const productItem = document.createElement('div');
+                productItem.className = 'product-item';
+                productItem.innerHTML = `
+                    <div>
+                        <strong>${product.name}</strong> - 
+                        ${product.quantity} x ${formatCurrency(product.price)}
+                    </div>
+                    <div>
+                        <strong>${formatCurrency(product.total)}</strong>
+                        <button class="btn-danger" onclick="removeProduct(${index})">Supprimer</button>
+                    </div>
+                `;
+                productList.appendChild(productItem);
+            });
+        }
+        
+        // Fonction pour supprimer un produit
+        function removeProduct(index) {
+            products.splice(index, 1);
+            updateProductList();
+            updatePreviewProductList();
+            calculateTotals();
+            showNotification('Produit supprimé.', 'success');
+        }
+        
+        // Fonction pour mettre à jour l'aperçu de la liste des produits
+        function updatePreviewProductList() {
+            const previewProductList = document.getElementById('previewProductList');
+            
+            if (products.length === 0) {
+                previewProductList.innerHTML = `
+                    <tr>
+                        <td colspan="4" style="text-align: center;">Aucun produit ajouté</td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            previewProductList.innerHTML = '';
+            
+            products.forEach(product => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${product.name}</td>
+                    <td>${product.quantity}</td>
+                    <td>${formatCurrency(product.price)}</td>
+                    <td>${formatCurrency(product.total)}</td>
+                `;
+                previewProductList.appendChild(row);
+            });
+        }
+        
+        // Fonction pour calculer les totaux
+        function calculateTotals() {
+            const subtotal = products.reduce((sum, product) => sum + product.total, 0);
+            const tax = 0; // TVA à 0% pour cet exemple
+            const total = subtotal + tax;
+            
+            document.getElementById('previewSubtotal').textContent = formatCurrency(subtotal);
+            document.getElementById('previewTax').textContent = formatCurrency(tax);
+            document.getElementById('previewTotal').textContent = formatCurrency(total);
+        }
+        
+        // Fonction pour générer le PDF
+        function generatePDF() {
+            if (products.length === 0) {
+                showNotification('Veuillez ajouter au moins un produit.', 'error');
+                return;
+            }
+            
+            // Afficher l'indicateur de chargement
+            document.getElementById('loadingIndicator').style.display = 'block';
+            
+            // Utiliser setTimeout pour permettre à l'UI de se mettre à jour
+            setTimeout(() => {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Ajouter le contenu de la facture au PDF avec des optimisations
+                addContentToPDF(doc, function() {
+                    // Générer le PDF et vérifier sa taille
+                    const pdfBlob = doc.output('blob');
+                    
+                    if (pdfBlob.size > 1000000) { // 1 Mo en octets
+                        // Si le PDF est trop gros, appliquer des optimisations supplémentaires
+                        optimizeAndGeneratePDF();
+                    } else {
+                        // Télécharger le PDF
+                        doc.save(`facture-${invoiceNumber}.pdf`);
+                        document.getElementById('loadingIndicator').style.display = 'none';
+                        showNotification('PDF généré avec succès! Taille: ' + formatFileSize(pdfBlob.size), 'success');
+                    }
+                });
+            }, 500);
+        }
+        
+        // Fonction pour ajouter le contenu au PDF
+        function addContentToPDF(doc, callback) {
+            // Ajouter le logo (s'il existe) avec une taille réduite
+            if (logoDataUrl) {
+                doc.addImage(logoDataUrl, 'JPEG', 14, 10, 40, 40, undefined, 'MEDIUM');
+            }
+            
+            // Informations de l'entreprise
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            doc.text(document.getElementById('companyName').value || 'Nom de l\'entreprise', 110, 20, { align: 'center' });
+            
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            doc.text(`Téléphone: ${document.getElementById('companyPhone').value || 'Non spécifié'}`, 110, 30, { align: 'center' });
+            doc.text(`Email: ${document.getElementById('companyEmail').value || 'Non spécifié'}`, 110, 35, { align: 'center' });
+            doc.text(`Site web: ${document.getElementById('companyWebsite').value || 'Non spécifié'}`, 110, 40, { align: 'center' });
+            
+            // Titre de la facture
+            doc.setFontSize(20);
+            doc.setFont(undefined, 'bold');
+            doc.text('FACTURE', 105, 60, { align: 'center' });
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'normal');
+            doc.text(`N°: ${invoiceNumber}`, 105, 67, { align: 'center' });
+            
+            // Informations du client et date
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.text('Client:', 14, 80);
+            doc.setFont(undefined, 'normal');
+            doc.text(document.getElementById('clientName').value || 'Non spécifié', 14, 86);
+            
+            const invoiceDate = new Date(document.getElementById('invoiceDate').value).toLocaleDateString('fr-FR');
+            doc.setFont(undefined, 'bold');
+            doc.text('Date de facturation:', 14, 96);
+            doc.setFont(undefined, 'normal');
+            doc.text(invoiceDate, 14, 102);
+            
+            doc.setFont(undefined, 'bold');
+            doc.text('Mode de paiement:', 14, 112);
+            doc.setFont(undefined, 'normal');
+            doc.text(document.getElementById('paymentMethod').value, 14, 118);
+            
+            // Tableau des produits
+            const startY = 130;
+            let currentY = startY;
+            
+            // En-tête du tableau
+            doc.setFillColor(37, 99, 235);
+            doc.setTextColor(255, 255, 255);
+            doc.rect(14, currentY, 182, 10, 'F');
+            doc.text('Produit', 16, currentY + 7);
+            doc.text('Quantité', 100, currentY + 7);
+            doc.text('Prix unitaire', 130, currentY + 7);
+            doc.text('Total', 170, currentY + 7);
+            
+            currentY += 10;
+            doc.setTextColor(0, 0, 0);
+            
+            // Lignes des produits
+            products.forEach(product => {
+                if (currentY > 250) {
+                    doc.addPage();
+                    currentY = 20;
+                }
+                
+                doc.setFontSize(10);
+                doc.text(product.name, 16, currentY + 6);
+                doc.text(product.quantity.toString(), 100, currentY + 6);
+                doc.text(formatCurrency(product.price), 130, currentY + 6);
+                doc.text(formatCurrency(product.total), 170, currentY + 6);
+                
+                // Ligne séparatrice
+                doc.line(14, currentY + 8, 196, currentY + 8);
+                
+                currentY += 10;
+            });
+            
+            // Totaux
+            const subtotal = products.reduce((sum, product) => sum + product.total, 0);
+            const tax = 0;
+            const total = subtotal + tax;
+            
+            currentY += 10;
+            doc.setFontSize(12);
+            doc.text(`Sous-total: ${formatCurrency(subtotal)}`, 150, currentY);
+            currentY += 8;
+            doc.text(`TVA (0%): ${formatCurrency(tax)}`, 150, currentY);
+            currentY += 8;
+            doc.setFont(undefined, 'bold');
+            doc.text(`Total: ${formatCurrency(total)}`, 150, currentY);
+            
+            // Informations de paiement
+            currentY += 15;
+            doc.setFont(undefined, 'normal');
+            doc.setFontSize(10);
+            doc.text('Informations de paiement:', 14, currentY);
+            currentY += 6;
+            doc.text('Merci de régler cette facture dans les 30 jours suivant sa réception.', 14, currentY);
+            
+            // Pied de page
+            doc.setFontSize(8);
+            doc.text('Facture générée avec Générateur de Facture Simplifié', 105, 280, { align: 'center' });
+            
+            callback();
+        }
+        
+        // Fonction pour optimiser et générer le PDF si la taille dépasse 1 Mo
+        function optimizeAndGeneratePDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Appliquer des optimisations supplémentaires
+            // 1. Ne pas inclure le logo s'il est trop gros
+            // 2. Réduire la qualité d'image du logo si nécessaire
+            
+            let includeLogo = true;
+            if (logoDataUrl && logoDataUrl.length > 100000) { // Si le logo fait plus de 100KB
+                includeLogo = false;
+            }
+            
+            // Ajouter le contenu optimisé
+            addOptimizedContentToPDF(doc, includeLogo);
+            
+            // Générer le PDF
+            const pdfBlob = doc.output('blob');
+            
+            if (pdfBlob.size > 1000000) {
+                // Si c'est toujours trop gros, ne pas inclure le logo du tout
+                const docFinal = new jsPDF();
+                addOptimizedContentToPDF(docFinal, false);
+                
+                const finalPdfBlob = docFinal.output('blob');
+                docFinal.save(`facture-${invoiceNumber}.pdf`);
+                document.getElementById('loadingIndicator').style.display = 'none';
+                showNotification('PDF généré avec optimisation. Taille: ' + formatFileSize(finalPdfBlob.size), 'success');
+            } else {
+                doc.save(`facture-${invoiceNumber}.pdf`);
+                document.getElementById('loadingIndicator').style.display = 'none';
+                showNotification('PDF généré avec optimisation. Taille: ' + formatFileSize(pdfBlob.size), 'success');
+            }
+        }
+        
+        // Fonction pour ajouter le contenu optimisé au PDF
+        function addOptimizedContentToPDF(doc, includeLogo) {
+            // Ajouter le logo (seulement si demandé et s'il existe)
+            if (includeLogo && logoDataUrl) {
+                doc.addImage(logoDataUrl, 'JPEG', 14, 10, 40, 40, undefined, 'FAST');
+            }
+            
+            // Le reste du contenu (identique à addContentToPDF mais sans logo si excludeLogo est true)
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            doc.text(document.getElementById('companyName').value || 'Nom de l\'entreprise', 110, 20, { align: 'center' });
+            
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            doc.text(`Téléphone: ${document.getElementById('companyPhone').value || 'Non spécifié'}`, 110, 30, { align: 'center' });
+            doc.text(`Email: ${document.getElementById('companyEmail').value || 'Non spécifié'}`, 110, 35, { align: 'center' });
+            doc.text(`Site web: ${document.getElementById('companyWebsite').value || 'Non spécifié'}`, 110, 40, { align: 'center' });
+            
+            // Titre de la facture
+            doc.setFontSize(20);
+            doc.setFont(undefined, 'bold');
+            doc.text('FACTURE', 105, 60, { align: 'center' });
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'normal');
+            doc.text(`N°: ${invoiceNumber}`, 105, 67, { align: 'center' });
+            
+            // Informations du client et date
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.text('Client:', 14, 80);
+            doc.setFont(undefined, 'normal');
+            doc.text(document.getElementById('clientName').value || 'Non spécifié', 14, 86);
+            
+            const invoiceDate = new Date(document.getElementById('invoiceDate').value).toLocaleDateString('fr-FR');
+            doc.setFont(undefined, 'bold');
+            doc.text('Date de facturation:', 14, 96);
+            doc.setFont(undefined, 'normal');
+            doc.text(invoiceDate, 14, 102);
+            
+            doc.setFont(undefined, 'bold');
+            doc.text('Mode de paiement:', 14, 112);
+            doc.setFont(undefined, 'normal');
+            doc.text(document.getElementById('paymentMethod').value, 14, 118);
+            
+            // Tableau des produits
+            const startY = 130;
+            let currentY = startY;
+            
+            // En-tête du tableau
+            doc.setFillColor(37, 99, 235);
+            doc.setTextColor(255, 255, 255);
+            doc.rect(14, currentY, 182, 10, 'F');
+            doc.text('Produit', 16, currentY + 7);
+            doc.text('Quantité', 100, currentY + 7);
+            doc.text('Prix unitaire', 130, currentY + 7);
+            doc.text('Total', 170, currentY + 7);
+            
+            currentY += 10;
+            doc.setTextColor(0, 0, 0);
+            
+            // Lignes des produits
+            products.forEach(product => {
+                if (currentY > 250) {
+                    doc.addPage();
+                    currentY = 20;
+                }
+                
+                doc.setFontSize(10);
+                doc.text(product.name, 16, currentY + 6);
+                doc.text(product.quantity.toString(), 100, currentY + 6);
+                doc.text(formatCurrency(product.price), 130, currentY + 6);
+                doc.text(formatCurrency(product.total), 170, currentY + 6);
+                
+                // Ligne séparatrice
+                doc.line(14, currentY + 8, 196, currentY + 8);
+                
+                currentY += 10;
+            });
+            
+            // Totaux
+            const subtotal = products.reduce((sum, product) => sum + product.total, 0);
+            const tax = 0;
+            const total = subtotal + tax;
+            
+            currentY += 10;
+            doc.setFontSize(12);
+            doc.text(`Sous-total: ${formatCurrency(subtotal)}`, 150, currentY);
+            currentY += 8;
+            doc.text(`TVA (0%): ${formatCurrency(tax)}`, 150, currentY);
+            currentY += 8;
+            doc.setFont(undefined, 'bold');
+            doc.text(`Total: ${formatCurrency(total)}`, 150, currentY);
+            
+            // Informations de paiement
+            currentY += 15;
+            doc.setFont(undefined, 'normal');
+            doc.setFontSize(10);
+            doc.text('Informations de paiement:', 14, currentY);
+            currentY += 6;
+            doc.text('Merci de régler cette facture dans les 30 jours suivant sa réception.', 14, currentY);
+            
+            // Pied de page
+            doc.setFontSize(8);
+            doc.text('Facture générée avec Générateur de Facture Simplifié', 105, 280, { align: 'center' });
+        }
+        
+        // Fonction pour réinitialiser le formulaire
+        function resetForm() {
+            if (confirm('Êtes-vous sûr de vouloir réinitialiser le formulaire? Toutes les données seront perdues.')) {
+                document.getElementById('companyName').value = '';
+                document.getElementById('companyPhone').value = '';
+                document.getElementById('companyEmail').value = '';
+                document.getElementById('companyWebsite').value = '';
+                document.getElementById('clientName').value = '';
+                document.getElementById('invoiceDate').value = new Date().toISOString().split('T')[0];
+                document.getElementById('paymentMethod').value = 'Mobile Money';
+                document.getElementById('productName').value = '';
+                document.getElementById('productQuantity').value = '1';
+                document.getElementById('productPrice').value = '';
+                
+                document.getElementById('logoPreview').style.display = 'none';
+                document.getElementById('previewLogoContainer').innerHTML = '';
+                document.getElementById('logoCompressionInfo').style.display = 'none';
+                
+                products = [];
+                updateProductList();
+                updatePreviewProductList();
+                calculateTotals();
+                
+                invoiceNumber = generateInvoiceNumber();
+                updatePreviewInvoiceNumber();
+                updatePreviewInvoiceDate(new Date().toISOString().split('T')[0]);
+                
+                showNotification('Formulaire réinitialisé.', 'success');
+            }
+        }
+        
+        // Fonction pour générer un numéro de facture
+        function generateInvoiceNumber() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+            return `FC-${year}${month}${day}-${random}`;
+        }
+        
+        // Fonction pour mettre à jour l'aperçu du numéro de facture
+        function updatePreviewInvoiceNumber() {
+            document.getElementById('previewInvoiceNumber').textContent = `N°: ${invoiceNumber}`;
+        }
+        
+        // Fonction pour mettre à jour l'aperçu de la date de facture
+        function updatePreviewInvoiceDate(dateString) {
+            const date = new Date(dateString);
+            const formattedDate = date.toLocaleDateString('fr-FR');
+            document.getElementById('previewInvoiceDate').textContent = formattedDate;
+        }
+        
+        // Fonction pour formater une valeur en devise
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format(amount);
+        }
+        
+        // Fonction pour formater la taille du fichier
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' octets';
+            else if (bytes < 1048576) return (bytes / 1024).toFixed(2) + ' Ko';
+            else return (bytes / 1048576).toFixed(2) + ' Mo';
+        }
+        
+        // Fonction pour afficher une notification
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
