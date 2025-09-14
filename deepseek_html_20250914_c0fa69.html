@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur de Facture Simplifié</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #3b82f6;
+            --accent-color: #ef4444;
+            --light-color: #f8fafc;
+            --dark-color: #1e293b;
+            --success-color: #10b981;
+            --gray-color: #64748b;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f1f5f9;
+            color: #334155;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 24px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        header::before {
+            content: "";
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            background: rgba(255, 255, 255, 0.08);
+            transform: rotate(-2deg);
+            z-index: 0;
+        }
+        
+        h1 {
+            margin-bottom: 12px;
+            font-size: 1.8rem;
+            position: relative;
+            z-index: 1;
+            font-weight: 700;
+        }
+        
+        header p {
+            font-size: 1rem;
+            position: relative;
+            z-index: 1;
+            opacity: 0.9;
+        }
+        
+        .app-container {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        
+        .input-section {
+            flex: 1;
+            min-width: 320px;
+            padding: 24px;
+            background: var(--light-color);
+        }
+        
+        .preview-section {
+            flex: 1;
+            min-width: 320px;
+            padding: 24px;
+            border-left: 1px solid #e2e8f0;
+            background: #fafafa;
+        }
+        
+        .section-title {
+            color: var(--primary-color);
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--secondary-color);
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: var(--dark-color);
+            font-size: 0.9rem;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.2s;
+            background: white;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+        
+        button {
+            padding: 12px 20px;
+            background: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.2s;
+            margin-top: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        button:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .btn-danger {
+            background: var(--accent-color);
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+        }
+        
+        .btn-success {
+            background: var(--success-color);
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+        }
+        
+        .product-list {
+            margin: 16px 0;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            background: white;
+        }
+        
+        .product-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+        
+        .product-item:hover {
+            background: #f8fafc;
+        }
+        
+        .product-item:last-child {
+            border-bottom: none;
+        }
+        
+        .product-item button {
+            width: auto;
+            padding: 6px 12px;
+            margin: 0;
+            font-size: 0.8rem;
+        }
+        
+        .invoice {
+            background: white;
+            padding: 28px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+            font-size: 0.9rem;
+            border-radius: 10px;
+        }
+        
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+        
+        .company-info, .client-info {
+            margin-bottom: 16px;
+        }
+        
+        .invoice-title {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        
+        .invoice-title h1 {
+            color: var(--primary-color);
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+        
+        .invoice-details {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        
+        .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 24px;
+            font-size: 0.85rem;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 0 0 1px #e2e8f0;
+        }
+        
+        .invoice-table th, .invoice-table td {
+            border: 1px solid #e2e8f0;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        .invoice-table th {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 600;
+        }
+        
+        .invoice-table tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+        
+        .invoice-totals {
+            width: 100%;
+            margin-bottom: 24px;
+            background: #f8fafc;
+            padding: 16px;
+            border-radius: 8px;
+        }
+        
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+        }
+        
+        .total-row.grand-total {
+            font-weight: bold;
+            font-size: 1.1em;
+            border-top: 2px solid var(--primary-color);
+            margin-top: 10px;
+            padding-top: 10px;
+            color: var(--primary-color);
+        }
+        
+        .payment-info {
+            margin-bottom: 20px;
+            padding: 16px;
+            background: #f8fafc;
+            border-radius: 8px;
+        }
+        
+        .invoice-footer {
+            margin-top: 28px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--gray-color);
+        }
+        
+        .actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        
+        .actions button {
+            flex: 1;
+        }
+        
+        .logo-upload {
+            margin-bottom: 16px;
+        }
+        
+        .logo-preview {
+            max-width: 100px;
+            max-height: 100px;
+            margin-top: 10px;
+            display: none;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .forceconnect-footer {
+            font-size: 0.8em;
+            color: var(--secondary-color);
+            margin-top: 10px;
+            font-weight: 600;
+            text-align: center;
+            padding: 16px;
+            background: #f8fafc;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 5px;
+        }
+        
+        .badge-primary {
+            background: var(--secondary-color);
+            color: white;
+        }
+        
+        .badge-danger {
+            background: var(--accent-color);
+            color: white;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .notification.success {
+            background: var(--success-color);
+        }
+        
+        .notification.error {
+            background: var(--accent-color);
+        }
+        
+        .notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        @media (max-width: 768px) {
+            .app-container {
+                flex-direction: column;
+            }
+            
+            .preview-section {
+                border-left: none;
+                border-top: 1px solid #e2e8f0;
+            }
+            
+            .invoice-header, .invoice-details {
+                flex-direction: column;
+                gap: 16px;
+            }
+            
+            .invoice-table {
+                font-size: 0.8rem;
+            }
+            
+            .invoice-table th, .invoice-table td {
+                padding: 8px;
+            }
+            
+            header {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            .input-section, .preview-section {
+                padding: 20px;
+            }
+            
+            .actions {
+                flex-direction: column;
+            }
+        }
+        
+        /* Styles d'impression améliorés */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #invoicePreview, #invoicePreview * {
+                visibility: visible;
+            }
+            #invoicePreview {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: var(--secondary-color);
+        }
+        
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--secondary-color);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Générateur de Facture Simplifié</h1>
+            <p>Créez des factures PDF professionnelles en quelques clics</p>
+        </header>
+        
+        <div class="app-container">
+            <div class="input-section">
+                <h2 class="section-title">Informations de l'Entreprise</h2>
+                
+                <div class="form-group logo-upload">
+                    <label for="companyLogo">Logo de l'entreprise</label>
+                    <input type="file" id="companyLogo" accept="image/*">
+                    <img id="logoPreview" class="logo-preview" alt="Aperçu du logo">
+                </div>
+                
+                <div class="form-group">
+                    <label for="companyName">Nom de l'entreprise <span class="badge badge-primary">Requis</span></label>
+                    <input type="text" id="companyName" required placeholder="Ex: Tech Solutions SARL">
+                </div>
+                
+                <div class="form-group">
+                    <label for="companyPhone">Téléphone <span class="badge badge-primary">Requis</span></label>
+                    <input type="text" id="companyPhone" required placeholder="Ex: +225 07 07 12 34 56">
+                </div>
+                
+                <div class="form-group">
+                    <label for="companyEmail">Email</label>
+                    <input type="email" id="companyEmail" placeholder="Ex: contact@example.com">
+                </div>
+                
+                <div class="form-group">
+                    <label for="companyWebsite">Site Web</label>
+                    <input type="url" id="companyWebsite" placeholder="Ex: https://www.example.com">
+                </div>
+                
+                <h2 class="section-title">Informations du Client</h2>
+                
+                <div class="form-group">
+                    <label for="clientName">Nom complet du client <span class="badge badge-primary">Requis</span></label>
+                    <input type="text" id="clientName" required placeholder="Ex: Jean Dupont">
+                </div>
+                
+                <h2 class="section-title">Détails de la Facture</h2>
+                
+                <div class="form-group">
+                    <label for="invoiceDate">Date de la facture <span class="badge badge-primary">Requis</span></label>
+                    <input type="date" id="invoiceDate" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="paymentMethod">Mode de paiement</label>
+                    <select id="paymentMethod">
+                        <option value="Espèces">Espèces</option>
+                        <option value="Mobile Money">Mobile Money</option>
+                        <option value="Virement Bancaire">Virement Bancaire</option>
+                        <option value="Chèque">Chèque</option>
+                        <option value="Carte Bancaire">Carte Bancaire</option>
+                    </select>
+                </div>
+                
+                <h2 class="section-title">Ajouter des Produits</h2>
+                
+                <div class="form-group">
+                    <label for="productName">Nom du produit</label>
+                    <input type="text" id="productName" placeholder="Ex: Ordinateur Portable">
+                </div>
+                
+                <div class="form-group">
+                    <label for="productQuantity">Quantité</label>
+                    <input type="number" id="productQuantity" min="1" value="1" placeholder="Ex: 2">
+                </div>
+                
+                <div class="form-group">
+                    <label for="productPrice">Prix unitaire (FCFA)</label>
+                    <input type="number" id="productPrice" min="0" step="0.01" placeholder="Ex: 250000">
+                </div>
+                
+                <button id="addProduct" class="btn-success">Ajouter le produit</button>
+                
+                <h3 class="section-title">Produits ajoutés</h3>
+                <div id="productList" class="product-list">
+                    <p id="noProducts">Aucun produit ajouté</p>
+                </div>
+                
+                <div class="actions">
+                    <button id="generatePDF" class="btn-success">Générer le PDF</button>
+                    <button id="resetForm" class="btn-danger">Réinitialiser</button>
+                </div>
+                
+                <div class="loading" id="loadingIndicator">
+                    <div class="loading-spinner"></div>
+                    <p>Génération du PDF en cours...</p>
+                </div>
+            </div>
+            
+            <div class="preview-section">
+                <h2 class="section-title">Aperçu de la Facture</h2>
+                <div id="invoicePreview" class="invoice">
+                    <div class="invoice-header">
+                        <div class="company-info">
+                            <div id="previewLogo"></div>
+                            <h2 id="previewCompanyName">Nom de l'entreprise</h2>
+                            <p id="previewCompanyPhone">Téléphone: </p>
+                            <p id="previewCompanyEmail">Email: </p>
+                            <p id="previewCompanyWebsite">Site Web: </p>
+                        </div>
+                        
+                        <div class="invoice-title">
+                            <h1>FACTURE</h1>
+                            <p id="previewInvoiceNumber">FAC-NomDuClient_DateHeure_NomDeL'entreprise=By ForceConnect</p>
+                        </div>
+                    </div>
+                    
+                    <div class="invoice-details">
+                        <div class="client-info">
+                            <h3>Client</h3>
+                            <p id="previewClientName">Nom du client</p>
+                        </div>
+                        
+                        <div class="invoice-info">
+                            <h3>Détails facture</h3>
+                            <p>Date: <span id="previewInvoiceDate"></span></p>
+                            <p>Mode de paiement: <span id="previewPaymentMethod"></span></p>
+                        </div>
+                    </div>
+                    
+                    <table class="invoice-table">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>Quantité</th>
+                                <th>Prix unitaire</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="previewProducts">
+                            <tr>
+                                <td colspan="4" style="text-align: center;">Aucun produit ajouté</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <div class="invoice-totals">
+                        <div class="total-row">
+                            <span>Sous-total:</span>
+                            <span id="previewSubtotal">0 FCFA</span>
+                        </div>
+                        <div class="total-row">
+                            <span>TVA (0%):</span>
+                            <span id="previewTax">0 FCFA</span>
+                        </div>
+                        <div class="total-row grand-total">
+                            <span>Total:</span>
+                            <span id="previewTotal">0 FCFA</span>
+                        </div>
+                    </div>
+                    
+                    <div class="payment-info">
+                        <h3>Informations de paiement</h3>
+                        <p id="previewPaymentDetails">Merci de régler cette facture dans les 30 jours suivant sa réception.</p>
+                    </div>
+                    
+                    <div class="invoice-footer">
+                        <p>Merci pour votre confiance !</p>
+                        <div class="forceconnect-footer">
+                            Facture générée par ForceConnect
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="notification" class="notification"></div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Références aux éléments du DOM
+            const companyLogoInput = document.getElementById('companyLogo');
+            const logoPreview = document.getElementById('logoPreview');
+            const companyNameInput = document.getElementById('companyName');
+            const companyPhoneInput = document.getElementById('companyPhone');
+            const companyEmailInput = document.getElementById('companyEmail');
+            const companyWebsiteInput = document.getElementById('companyWebsite');
+            const clientNameInput = document.getElementById('clientName');
+            const invoiceDateInput = document.getElementById('invoiceDate');
+            const paymentMethodInput = document.getElementById('paymentMethod');
+            const productNameInput = document.getElementById('productName');
+            const productQuantityInput = document.getElementById('productQuantity');
+            const productPriceInput = document.getElementById('productPrice');
+            const addProductBtn = document.getElementById('addProduct');
+            const productList = document.getElementById('productList');
+            const noProducts = document.getElementById('noProducts');
+            const generatePDFBtn = document.getElementById('generatePDF');
+            const resetFormBtn = document.getElementById('resetForm');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const notification = document.getElementById('notification');
+            
+            // Aperçu des éléments
+            const previewLogo = document.getElementById('previewLogo');
+            const previewCompanyName = document.getElementById('previewCompanyName');
+            const previewCompanyPhone = document.getElementById('previewCompanyPhone');
+            const previewCompanyEmail = document.getElementById('previewCompanyEmail');
+            const previewCompanyWebsite = document.getElementById('previewCompanyWebsite');
+            const previewInvoiceNumber = document.getElementById('previewInvoiceNumber');
+            const previewClientName = document.getElementById('previewClientName');
+            const previewInvoiceDate = document.getElementById('previewInvoiceDate');
+            const previewPaymentMethod = document.getElementById('previewPaymentMethod');
+            const previewProducts = document.getElementById('previewProducts');
+            const previewSubtotal = document.getElementById('previewSubtotal');
+            const previewTax = document.getElementById('previewTax');
+            const previewTotal = document.getElementById('previewTotal');
+            
+            // Tableau pour stocker les produits
+            let products = [];
+            
+            // Initialiser la date du jour
+            const today = new Date().toISOString().split('T')[0];
+            invoiceDateInput.value = today;
+            updateInvoiceDatePreview();
+            
+            // Événements
+            companyLogoInput.addEventListener('change', handleLogoUpload);
+            companyNameInput.addEventListener('input', updateCompanyNamePreview);
+            companyPhoneInput.addEventListener('input', updateCompanyPhonePreview);
+            companyEmailInput.addEventListener('input', updateCompanyEmailPreview);
+            companyWebsiteInput.addEventListener('input', updateCompanyWebsitePreview);
+            clientNameInput.addEventListener('input', updateClientNamePreview);
+            invoiceDateInput.addEventListener('change', updateInvoiceDatePreview);
+            paymentMethodInput.addEventListener('change', updatePaymentMethodPreview);
+            addProductBtn.addEventListener('click', addProduct);
+            generatePDFBtn.addEventListener('click', generatePDF);
+            resetFormBtn.addEventListener('click', resetForm);
+            
+            // Fonctions
+            function handleLogoUpload(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        logoPreview.src = e.target.result;
+                        logoPreview.style.display = 'block';
+                        
+                        // Mettre à jour l'aperçu
+                        previewLogo.innerHTML = `<img src="${e.target.result}" alt="Logo" style="max-width: 100px; max-height: 100px;">`;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+            
+            function updateCompanyNamePreview() {
+                previewCompanyName.textContent = companyNameInput.value || 'Nom de l\'entreprise';
+                updateInvoiceNumberPreview();
+            }
+            
+            function updateCompanyPhonePreview() {
+                previewCompanyPhone.textContent = `Téléphone: ${companyPhoneInput.value}`;
+            }
+            
+            function updateCompanyEmailPreview() {
+                previewCompanyEmail.textContent = companyEmailInput.value ? `Email: ${companyEmailInput.value}` : '';
+            }
+            
+            function updateCompanyWebsitePreview() {
+                previewCompanyWebsite.textContent = companyWebsiteInput.value ? `Site Web: ${companyWebsiteInput.value}` : '';
+            }
+            
+            function updateClientNamePreview() {
+                previewClientName.textContent = clientNameInput.value || 'Nom du client';
+                updateInvoiceNumberPreview();
+            }
+            
+            function updateInvoiceDatePreview() {
+                const date = new Date(invoiceDateInput.value);
+                const formattedDate = date.toLocaleDateString('fr-FR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+                previewInvoiceDate.textContent = formattedDate;
+                updateInvoiceNumberPreview();
+            }
+            
+            function updatePaymentMethodPreview() {
+                previewPaymentMethod.textContent = paymentMethodInput.value;
+            }
+            
+            function updateInvoiceNumberPreview() {
+                const clientName = clientNameInput.value || 'Client';
+                const companyName = companyNameInput.value || 'Entreprise';
+                const now = new Date();
+                const dateTime = now.toISOString().slice(0, 19).replace(/:/g, '-').replace('T', '_');
+                
+                // Formater le nom du client pour le nom de fichier
+                const formattedClientName = clientName
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "")
+                    .replace(/[^a-zA-Z0-9]/g, "_");
+                
+                previewInvoiceNumber.textContent = `FAC-${formattedClientName}_${dateTime}_${companyName.replace(/[^a-zA-Z0-9]/g, "_")}=By ForceConnect`;
+            }
+            
+            function addProduct() {
+                const name = productNameInput.value.trim();
+                const quantity = parseInt(productQuantityInput.value);
+                const price = parseFloat(productPriceInput.value);
+                
+                if (!name || isNaN(quantity) || quantity <= 0 || isNaN(price) || price < 0) {
+                    showNotification('Veuillez remplir tous les champs du produit correctement', 'error');
+                    return;
+                }
+                
+                const product = {
+                    name,
+                    quantity,
+                    price,
+                    total: quantity * price
+                };
+                
+                products.push(product);
+                updateProductList();
+                updateInvoicePreview();
+                
+                // Réinitialiser les champs de produit
+                productNameInput.value = '';
+                productQuantityInput.value = '1';
+                productPriceInput.value = '';
+                productNameInput.focus();
+                
+                showNotification('Produit ajouté avec succès', 'success');
+            }
+            
+            function updateProductList() {
+                if (products.length === 0) {
+                    noProducts.style.display = 'block';
+                    productList.innerHTML = '';
+                    productList.appendChild(noProducts);
+                    return;
+                }
+                
+                noProducts.style.display = 'none';
+                productList.innerHTML = '';
+                
+                products.forEach((product, index) => {
+                    const productItem = document.createElement('div');
+                    productItem.className = 'product-item';
+                    productItem.innerHTML = `
+                        <div>
+                            <strong>${product.name}</strong> - 
+                            ${product.quantity} x ${formatCurrency(product.price)}
+                        </div>
+                        <div>
+                            <strong>${formatCurrency(product.total)}</strong>
+                            <button class="btn-danger" data-index="${index}">Supprimer</button>
+                        </div>
+                    `;
+                    productList.appendChild(productItem);
+                });
+                
+                // Ajouter les événements aux boutons de suppression
+                const deleteButtons = productList.querySelectorAll('button');
+                deleteButtons.forEach(button => {
+                    button.addEventListener('click', function() {
+                        const index = parseInt(this.getAttribute('data-index'));
+                        products.splice(index, 1);
+                        updateProductList();
+                        updateInvoicePreview();
+                        showNotification('Produit supprimé', 'success');
+                    });
+                });
+            }
+            
+            function updateInvoicePreview() {
+                if (products.length === 0) {
+                    previewProducts.innerHTML = `
+                        <tr>
+                            <td colspan="4" style="text-align: center;">Aucun produit ajouté</td>
+                        </tr>
+                    `;
+                    previewSubtotal.textContent = '0 FCFA';
+                    previewTax.textContent = '0 FCFA';
+                    previewTotal.textContent = '0 FCFA';
+                    return;
+                }
+                
+                let subtotal = 0;
+                previewProducts.innerHTML = '';
+                
+                products.forEach(product => {
+                    subtotal += product.total;
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${product.name}</td>
+                        <td>${product.quantity}</td>
+                        <td>${formatCurrency(product.price)}</td>
+                        <td>${formatCurrency(product.total)}</td>
+                    `;
+                    previewProducts.appendChild(row);
+                });
+                
+                const tax = 0; // TVA à 0%
+                const total = subtotal + tax;
+                
+                previewSubtotal.textContent = formatCurrency(subtotal);
+                previewTax.textContent = formatCurrency(tax);
+                previewTotal.textContent = formatCurrency(total);
+            }
+            
+            function formatCurrency(amount) {
+                return new Intl.NumberFormat('fr-FR', {
+                    style: 'currency',
+                    currency: 'XOF'
+                }).format(amount);
+            }
+            
+            async function generatePDF() {
+                // Validation des champs requis
+                if (!companyNameInput.value.trim()) {
+                    showNotification('Veuillez saisir le nom de l\'entreprise', 'error');
+                    companyNameInput.focus();
+                    return;
+                }
+                
+                if (!companyPhoneInput.value.trim()) {
+                    showNotification('Veuillez saisir le téléphone de l\'entreprise', 'error');
+                    companyPhoneInput.focus();
+                    return;
+                }
+                
+                if (!clientNameInput.value.trim()) {
+                    showNotification('Veuillez saisir le nom du client', 'error');
+                    clientNameInput.focus();
+                    return;
+                }
+                
+                if (products.length === 0) {
+                    showNotification('Veuillez ajouter au moins un produit', 'error');
+                    productNameInput.focus();
+                    return;
+                }
+                
+                loadingIndicator.style.display = 'block';
+                
+                try {
+                    // Attendre que le DOM soit mis à jour
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    // Utiliser html2canvas pour capturer l'aperçu de la facture
+                    const canvas = await html2canvas(document.getElementById('invoicePreview'), {
+                        scale: 2,
+                        useCORS: true,
+                        logging: false
+                    });
+                    
+                    const imgData = canvas.toDataURL('image/png');
+                    
+                    // Utiliser jsPDF pour créer le PDF
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = pdf.internal.pageSize.getHeight();
+                    const imgWidth = canvas.width;
+                    const imgHeight = canvas.height;
+                    const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+                    const imgX = (pdfWidth - imgWidth * ratio) / 2;
+                    
+                    pdf.addImage(imgData, 'PNG', imgX, 10, imgWidth * ratio, imgHeight * ratio);
+                    
+                    // Générer le nom de fichier selon le format demandé
+                    const clientName = clientNameInput.value || 'Client';
+                    const companyName = companyNameInput.value || 'Entreprise';
+                    const now = new Date();
+                    const dateTime = now.toISOString().slice(0, 19).replace(/:/g, '-').replace('T', '_');
+                    
+                    // Formater le nom du client pour le nom de fichier
+                    const formattedClientName = clientName
+                        .normalize("NFD")
+                        .replace(/[\u0300-\u036f]/g, "")
+                        .replace(/[^a-zA-Z0-9]/g, "_");
+                    
+                    const fileName = `FAC-${formattedClientName}_${dateTime}_${companyName.replace(/[^a-zA-Z0-9]/g, "_")}=By_ForceConnect.pdf`;
+                    
+                    // Sauvegarder le PDF
+                    pdf.save(fileName);
+                    
+                    showNotification('PDF généré avec succès', 'success');
+                } catch (error) {
+                    console.error('Erreur lors de la génération du PDF:', error);
+                    showNotification('Erreur lors de la génération du PDF', 'error');
+                } finally {
+                    loadingIndicator.style.display = 'none';
+                }
+            }
+            
+            function resetForm() {
+                if (confirm('Êtes-vous sûr de vouloir réinitialiser le formulaire ? Toutes les données seront perdues.')) {
+                    document.querySelector('form').reset();
+                    products = [];
+                    updateProductList();
+                    updateInvoicePreview();
+                    
+                    // Réinitialiser l'aperçu du logo
+                    logoPreview.style.display = 'none';
+                    previewLogo.innerHTML = '';
+                    
+                    // Réinitialiser les aperçus
+                    previewCompanyName.textContent = 'Nom de l\'entreprise';
+                    previewCompanyPhone.textContent = 'Téléphone: ';
+                    previewCompanyEmail.textContent = '';
+                    previewCompanyWebsite.textContent = '';
+                    previewClientName.textContent = 'Nom du client';
+                    updateInvoiceDatePreview();
+                    previewPaymentMethod.textContent = '';
+                    
+                    showNotification('Formulaire réinitialisé', 'success');
+                }
+            }
+            
+            function showNotification(message, type) {
+                notification.textContent = message;
+                notification.className = `notification ${type}`;
+                notification.classList.add('show');
+                
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            }
+            
+            // Initialiser l'aperçu
+            updateInvoicePreview();
+        });
+    </script>
+</body>
+</html>
