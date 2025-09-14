@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur de Facture Simplifié</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        /* [Vos styles CSS existants] */
+        /* ... (conserver tous vos styles existants) ... */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Générateur de Facture Simplifié</h1>
+            <p>Créez des factures PDF professionnelles en quelques clics</p>
+        </header>
+        
+        <div class="app-container">
+            <!-- [Section input existante] -->
+            <!-- ... (conserver tout le HTML existant) ... -->
+        </div>
+    </div>
+    
+    <div id="notification" class="notification"></div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // [Toutes vos variables et références DOM existantes]
+            
+            // Nouvelle fonction pour compresser une image
+            function compressImage(src, maxWidth, maxHeight, quality, callback) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    // Redimensionner si nécessaire
+                    if (width > maxWidth) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    }
+                    
+                    if (height > maxHeight) {
+                        width = Math.round((width * maxHeight) / height);
+                        height = maxHeight;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Convertir en format WebP avec qualité réduite si supporté
+                    try {
+                        callback(canvas.toDataURL('image/webp', quality));
+                    } catch (e) {
+                        // Fallback en JPEG si WebP n'est pas supporté
+                        callback(canvas.toDataURL('image/jpeg', quality));
+                    }
+                };
+                img.onerror = function() {
+                    callback(src); // En cas d'erreur, retourner l'original
+                };
+                img.src = src;
+            }
+
+            // Modifier la fonction handleLogoUpload pour compresser l'image
+            function handleLogoUpload(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        // Compresser l'image avant de l'afficher
+                        compressImage(e.target.result, 200, 200, 0.7, function(compressedImage) {
+                            logoPreview.src = compressedImage;
+                            logoPreview.style.display = 'block';
+                            
+                            // Mettre à jour l'aperçu avec l'image compressée
+                            previewLogo.innerHTML = `<img src="${compressedImage}" alt="Logo" style="max-width: 100px; max-height: 100px;">`;
+                        });
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+
+            // Modifier la fonction generatePDF pour réduire la qualité
+            async function generatePDF() {
+                // [Validation des champs existante]
+                
+                loadingIndicator.style.display = 'block';
+                
+                try {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    // Réduire la qualité et la résolution pour un PDF plus petit
+                    const canvas = await html2canvas(document.getElementById('invoicePreview'), {
+                        scale: 1.5, // Réduit de 2 à 1.5
+                        useCORS: true,
+                        logging: false,
+                        quality: 0.8 // Qualité réduite
+                    });
+                    
+                    const imgData = canvas.toDataURL('image/jpeg', 0.8); // Format JPEG avec qualité réduite
+                    
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = pdf.internal.pageSize.getHeight();
+                    const imgWidth = canvas.width;
+                    const imgHeight = canvas.height;
+                    const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+                    const imgX = (pdfWidth - imgWidth * ratio) / 2;
+                    
+                    pdf.addImage(imgData, 'JPEG', imgX, 10, imgWidth * ratio, imgHeight * ratio);
+                    
+                    // [Génération du nom de fichier existante]
+                    
+                    pdf.save(fileName);
+                    
+                    showNotification('PDF généré avec succès', 'success');
+                } catch (error) {
+                    console.error('Erreur lors de la génération du PDF:', error);
+                    showNotification('Erreur lors de la génération du PDF', 'error');
+                } finally {
+                    loadingIndicator.style.display = 'none';
+                }
+            }
+
+            // Alternative: génération directe du PDF sans image (optionnel)
+            function generatePDFTextOnly() {
+                if (!companyNameInput.value.trim() || !companyPhoneInput.value.trim() || 
+                    !clientNameInput.value.trim() || products.length === 0) {
+                    showNotification('Veuillez remplir tous les champs requis', 'error');
+                    return;
+                }
+                
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF();
+                
+                // Ajouter le contenu textuel directement
+                let y = 20;
+                
+                // En-tête avec informations de l'entreprise
+                pdf.setFontSize(20);
+                pdf.text("FACTURE", 105, y, { align: 'center' });
+                y += 15;
+                
+                pdf.setFontSize(12);
+                pdf.text(`Entreprise: ${companyNameInput.value}`, 20, y);
+                y += 8;
+                pdf.text(`Téléphone: ${companyPhoneInput.value}`, 20, y);
+                y += 8;
+                if (companyEmailInput.value) {
+                    pdf.text(`Email: ${companyEmailInput.value}`, 20, y);
+                    y += 8;
+                }
+                if (companyWebsiteInput.value) {
+                    pdf.text(`Site Web: ${companyWebsiteInput.value}`, 20, y);
+                    y += 8;
+                }
+                
+                // Informations client
+                y += 10;
+                pdf.setFontSize(14);
+                pdf.text("CLIENT", 20, y);
+                y += 8;
+                pdf.setFontSize(12);
+                pdf.text(`Nom: ${clientNameInput.value}`, 20, y);
+                y += 15;
+                
+                // Détails de la facture
+                const invoiceDate = new Date(invoiceDateInput.value);
+                const formattedDate = invoiceDate.toLocaleDateString('fr-FR');
+                pdf.text(`Date: ${formattedDate}`, 20, y);
+                y += 8;
+                pdf.text(`Mode de paiement: ${paymentMethodInput.value}`, 20, y);
+                y += 15;
+                
+                // Produits
+                pdf.setFontSize(14);
+                pdf.text("PRODUITS/SERVICES", 20, y);
+                y += 10;
+                
+                // En-têtes du tableau
+                pdf.setFontSize(12);
+                pdf.text("Description", 20, y);
+                pdf.text("Quantité", 80, y);
+                pdf.text("Prix unitaire", 110, y);
+                pdf.text("Total", 150, y);
+                y += 8;
+                
+                // Ligne séparatrice
+                pdf.line(20, y, 190, y);
+                y += 10;
+                
+                // Produits
+                let subtotal = 0;
+                products.forEach(product => {
+                    if (y > 250) {
+                        pdf.addPage();
+                        y = 20;
+                    }
+                    
+                    pdf.text(product.name, 20, y);
+                    pdf.text(product.quantity.toString(), 80, y);
+                    pdf.text(formatCurrency(product.price), 110, y);
+                    pdf.text(formatCurrency(product.total), 150, y);
+                    y += 8;
+                    
+                    subtotal += product.total;
+                });
+                
+                y += 10;
+                pdf.line(20, y, 190, y);
+                y += 10;
+                
+                // Totaux
+                pdf.text("Sous-total:", 130, y);
+                pdf.text(formatCurrency(subtotal), 150, y);
+                y += 8;
+                
+                pdf.text("TVA (0%):", 130, y);
+                pdf.text(formatCurrency(0), 150, y);
+                y += 8;
+                
+                pdf.setFontSize(14);
+                pdf.text("Total:", 130, y);
+                pdf.text(formatCurrency(subtotal), 150, y);
+                
+                // Pied de page
+                pdf.setFontSize(10);
+                pdf.text("Facture générée par ForceConnect", 105, 280, { align: 'center' });
+                
+                // Sauvegarder le PDF
+                const clientName = clientNameInput.value || 'Client';
+                const companyName = companyNameInput.value || 'Entreprise';
+                const now = new Date();
+                const dateTime = now.toISOString().slice(0, 19).replace(/:/g, '-').replace('T', '_');
+                
+                const formattedClientName = clientName
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "")
+                    .replace(/[^a-zA-Z0-9]/g, "_");
+                
+                const fileName = `FAC-${formattedClientName}_${dateTime}_${companyName.replace(/[^a-zA-Z0-9]/g, "_")}=By_ForceConnect.pdf`;
+                
+                pdf.save(fileName);
+                showNotification('PDF généré avec succès (version texte)', 'success');
+            }
+
+            // Ajouter un bouton pour la version texte
+            const actionsDiv = document.querySelector('.actions');
+            const textPDFBtn = document.createElement('button');
+            textPDFBtn.textContent = 'PDF Version Texte';
+            textPDFBtn.className = 'btn-success';
+            textPDFBtn.addEventListener('click', generatePDFTextOnly);
+            actionsDiv.insertBefore(textPDFBtn, generatePDFBtn);
+
+            // [Le reste de votre code existant]
+        });
+    </script>
+</body>
+</html>
