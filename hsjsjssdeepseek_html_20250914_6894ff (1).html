@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur de Facture Professionnel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --light-color: #ecf0f1;
+            --dark-color: #34495e;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7f9;
+            color: #333;
+            line-height: 1.6;
+            padding: 10px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        header {
+            background: var(--primary-color);
+            color: white;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        h1 {
+            margin-bottom: 10px;
+            font-size: 1.5rem;
+        }
+        
+        header p {
+            font-size: 0.9rem;
+        }
+        
+        .app-container {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        
+        .input-section {
+            flex: 1;
+            min-width: 300px;
+            padding: 15px;
+            background: var(--light-color);
+        }
+        
+        .preview-section {
+            flex: 1;
+            min-width: 300px;
+            padding: 15px;
+            border-left: 1px solid #ddd;
+        }
+        
+        .form-group {
+            margin-bottom: 12px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: var(--dark-color);
+            font-size: 0.9rem;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        button {
+            padding: 12px 15px;
+            background: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: background 0.3s;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            background: #2980b9;
+        }
+        
+        .btn-danger {
+            background: var(--accent-color);
+        }
+        
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        
+        .product-list {
+            margin: 15px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .product-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            font-size: 0.9rem;
+        }
+        
+        .product-item:last-child {
+            border-bottom: none;
+        }
+        
+        .product-item button {
+            width: auto;
+            padding: 3px 8px;
+            margin: 0;
+            font-size: 0.8rem;
+        }
+        
+        .invoice {
+            background: white;
+            padding: 20px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.05);
+            font-size: 0.9rem;
+        }
+        
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        
+        .company-info, .client-info {
+            margin-bottom: 15px;
+        }
+        
+        .invoice-title {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .invoice-details {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        
+        .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 0.85rem;
+        }
+        
+        .invoice-table th, .invoice-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .invoice-table th {
+            background-color: #f8f9fa;
+        }
+        
+        .invoice-totals {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+        }
+        
+        .total-row.grand-total {
+            font-weight: bold;
+            font-size: 1.1em;
+            border-top: 2px solid var(--primary-color);
+            margin-top: 8px;
+            padding-top: 8px;
+        }
+        
+        .payment-info {
+            margin-bottom: 20px;
+        }
+        
+        .invoice-footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            font-size: 0.85rem;
+        }
+        
+        .qr-code {
+            text-align: center;
+            margin: 15px 0;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .actions button {
+            flex: 1;
+        }
+        
+        .logo-upload {
+            margin-bottom: 12px;
+        }
+        
+        .logo-preview {
+            max-width: 100px;
+            max-height: 100px;
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .forceconnect-footer {
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .app-container {
+                flex-direction: column;
+            }
+            
+            .preview-section {
+                border-left: none;
+                border-top: 1px solid #ddd;
+            }
+            
+            .invoice-header, .invoice-details {
+                flex-direction: column;
+            }
+            
+            .invoice-table {
+                font-size: 0.8rem;
+            }
+            
+            .invoice-table th, .invoice-table td {
+                padding: 5px;
+            }
+            
+            header {
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 1.3rem;
+            }
+            
+            .input-section, .preview-section {
+                padding: 10px;
+            }
+        }
+        
+        /* Styles d'impression améliorés */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #invoicePreview, #invoicePreview * {
+                visibility: visible;
+            }
+            #invoicePreview {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: var(--secondary-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Générateur de Facture Professionnel</h1>
+            <p>Créez des factures PDF complètes et professionnelles</p>
+        </header>
+        
+        <div class="app-container">
+            <div class="input-section">
+                <h2>Informations de l'Entreprise</h2>
+                
+                <div class="form-group logo-upload">
+                    <label for="companyLogo">Logo de l'entreprise</label>
+                    <input type="file" id="companyLogo" accept="image/*">
+                    <img id="logoPreview" class="logo-preview" alt="Aperçu du logo">
+                </div>
+                
+                <div class="form-group">
+                    <label for="companyName">Nom de l'entreprise *</label>
+                    <input type="text" id="companyName" required placeholder="Ex: Tech Solutions SARL">
+                </div>
+                
+                <div class="form-group">
+                    <label for="companyAddress">Adresse *</label>
+                    <textarea id="companyAddress" required placeholder="Adresse complète de l'entreprise"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="companyPhone">Téléphone *</label>
+                    <input type="text" id="companyPhone" required placeholder="Ex: +225 07 07 12 34 56">
+                </div>
+                
+                <div class="form-group">
+                    <label for="companyEmail">Email</label>
+                    <input type="email" id="companyEmail" placeholder="Ex: contact@example.com">
+                </div>
+                
+                <div class="form-group">
+                    <label for="companyWebsite">Site Web</label>
+                    <input type="url" id="companyWebsite" placeholder="Ex: https://www.example.com">
+                </div>
+                
+                <h2>Informations du Client</h2>
+                
+                <div class="form-group">
+                    <label for="clientName">Nom complet du client *</label>
+                    <input type="text" id="clientName" required placeholder="Ex: Jean Dupont">
+                </div>
+                
+                <div class="form-group">
+                    <label for="clientAddress">Adresse du client</label>
+                    <textarea id="clientAddress" placeholder="Adresse complète du client"></textarea>
+                </div>
+                
+                <h2>Détails de la Facture</h2>
+                
+                <div class="form-group">
+                    <label for="invoiceNumber">Numéro de facture *</label>
+                    <input type="text" id="invoiceNumber" required placeholder="Ex: F2023-001">
+                </div>
+                
+                <div class="form-group">
+                    <label for="invoiceDate">Date de la facture *</label>
+                    <input type="date" id="invoiceDate" required>
+                </div>
+                
+                <h2>Ajouter des Produits</h2>
+                
+                <div class="form-group">
+                    <label for="productName">Nom du produit *</label>
+                    <input type="text" id="productName" placeholder="Ex: Ordinateur Portable">
+                </div>
+                
+                <div class="form-group">
+                    <label for="productQuantity">Quantité *</label>
+                    <input type="number" id="productQuantity" min="1" value="1" placeholder="Ex: 2">
+                </div>
+                
+                <div class="form-group">
+                    <label for="productPrice">Prix unitaire (FCFA) *</label>
+                    <input type="number" id="productPrice" min="0" step="0.01" placeholder="Ex: 250000">
+                </div>
+                
+                <button id="addProduct">Ajouter le produit</button>
+                
+                <h3>Produits ajoutés</h3>
+                <div class="product-list" id="productList">
+                    <p>Aucun produit ajouté</p>
+                </div>
+                
+                <div class="form-group">
+                    <label for="amountPaid">Montant payé par le client (FCFA)</label>
+                    <input type="number" id="amountPaid" min="0" step="0.01" placeholder="Ex: 600000">
+                </div>
+                
+                <div class="actions">
+                    <button id="generateInvoice">Générer la facture PDF</button>
+                    <button id="resetForm" class="btn-danger">Réinitialiser</button>
+                </div>
+            </div>
+            
+            <div class="preview-section">
+                <h2>Aperçu de la Facture</h2>
+                <div id="invoicePreview" class="invoice">
+                    <div class="invoice-header">
+                        <div class="company-info">
+                            <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                                <img id="previewLogo" src="" style="max-height: 60px; max-width: 120px; margin-right: 15px; display: none;">
+                                <div>
+                                    <h2 id="previewCompanyName">Nom de l'entreprise</h2>
+                                    <p id="previewCompanyAddress">Adresse de l'entreprise</p>
+                                </div>
+                            </div>
+                            <p id="previewCompanyPhone">Téléphone: +225 XX XX XX XX</p>
+                            <p id="previewCompanyEmail">Email: contact@example.com</p>
+                            <p id="previewCompanyWebsite">Site: www.example.com</p>
+                        </div>
+                        
+                        <div class="invoice-title">
+                            <h1>FACTURE</h1>
+                            <p>N°: <span id="previewInvoiceNumber">F2023-001</span></p>
+                            <p>Date: <span id="previewInvoiceDate">01/01/2023</span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="invoice-details">
+                        <div class="client-info">
+                            <h3>Client</h3>
+                            <p id="previewClientName">Nom du client</p>
+                            <p id="previewClientAddress">Adresse du client</p>
+                        </div>
+                    </div>
+                    
+                    <table class="invoice-table">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>Quantité</th>
+                                <th>Prix Unitaire (FCFA)</th>
+                                <th>Total (FCFA)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="previewProducts">
+                            <tr>
+                                <td colspan="4" style="text-align: center;">Aucun produit ajouté</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <div class="invoice-totals">
+                        <div class="total-row">
+                            <span>Sous-total:</span>
+                            <span id="previewSubtotal">0 FCFA</span>
+                        </div>
+                        <div class="total-row">
+                            <span>Total:</span>
+                            <span id="previewTotal">0 FCFA</span>
+                        </div>
+                        <div class="total-row">
+                            <span>Montant payé:</span>
+                            <span id="previewAmountPaid">0 FCFA</span>
+                        </div>
+                        <div class="total-row grand-total">
+                            <span>Monnaie à rendre:</span>
+                            <span id="previewChange">0 FCFA</span>
+                        </div>
+                    </div>
+                    
+                    <div class="payment-info">
+                        <p>Mode de paiement: <span id="previewPaymentMethod">Espèces</span></p>
+                    </div>
+                    
+                    <div class="qr-code">
+                        <p>Scannez pour visiter notre site web</p>
+                        <div id="previewQrCode">
+                            <div style="width:120px;height:120px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:12px;">
+                                <p style="text-align:center;">QR Code pour<br>le site web</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="invoice-footer">
+                        <p>Merci pour votre confiance !</p>
+                        <p>Pour toute question, contactez-nous à <span id="previewFooterPhone">+225 XX XX XX XX</span></p>
+                        <p class="forceconnect-footer">facture by ForceConnect</p>
+                    </div>
+                </div>
+                <div id="loadingMessage" class="loading">
+                    <p>Génération du PDF en cours...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Définir la date du jour comme date par défaut
+            const today = new Date().toISOString().substr(0, 10);
+            document.getElementById('invoiceDate').value = today;
+
+            // Initialiser les produits
+            let products = [];
+            let companyLogo = null;
+
+            // Fonction pour formater la devise
+            function formatCurrency(amount) {
+                return new Intl.NumberFormat('fr-FR', {
+                    style: 'currency',
+                    currency: 'XOF'
+                }).format(amount);
+            }
+
+            // Gérer l'upload du logo
+            document.getElementById('companyLogo').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        companyLogo = event.target.result;
+                        document.getElementById('logoPreview').src = companyLogo;
+                        document.getElementById('logoPreview').style.display = 'block';
+                        document.getElementById('previewLogo').src = companyLogo;
+                        document.getElementById('previewLogo').style.display = 'inline';
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            // Ajouter un produit
+            document.getElementById('addProduct').addEventListener('click', function() {
+                const name = document.getElementById('productName').value;
+                const quantity = parseInt(document.getElementById('productQuantity').value);
+                const price = parseFloat(document.getElementById('productPrice').value);
+                
+                if (!name || isNaN(quantity) || quantity <= 0 || isNaN(price) || price < 0) {
+                    alert('Veuillez remplir tous les champs du produit avec des valeurs valides.');
+                    return;
+                }
+                
+                const product = {
+                    name,
+                    quantity,
+                    price,
+                    total: quantity * price
+                };
+                
+                products.push(product);
+                updateProductList();
+                updateInvoicePreview();
+                
+                // Réinitialiser les champs de produit
+                document.getElementById('productName').value = '';
+                document.getElementById('productQuantity').value = '1';
+                document.getElementById('productPrice').value = '';
+            });
+
+            // Mettre à jour la liste des produits
+            function updateProductList() {
+                const productList = document.getElementById('productList');
+                
+                if (products.length === 0) {
+                    productList.innerHTML = '<p>Aucun produit ajouté</p>';
+                    return;
+                }
+                
+                productList.innerHTML = '';
+                products.forEach((product, index) => {
+                    const productItem = document.createElement('div');
+                    productItem.className = 'product-item';
+                    productItem.innerHTML = `
+                        <div>${product.name} (${product.quantity} x ${formatCurrency(product.price)})</div>
+                        <div>
+                            <span style="margin-right: 10px;">${formatCurrency(product.total)}</span>
+                            <button class="btn-danger" data-index="${index}">Supprimer</button>
+                        </div>
+                    `;
+                    productList.appendChild(productItem);
+                });
+                
+                // Ajouter les écouteurs d'événements pour les boutons de suppression
+                const deleteButtons = productList.querySelectorAll('button');
+                deleteButtons.forEach(button => {
+                    button.addEventListener('click', function() {
+                        const index = parseInt(this.getAttribute('data-index'));
+                        products.splice(index, 1);
+                        updateProductList();
+                        updateInvoicePreview();
+                    });
+                });
+            }
+
+            // Mettre à jour l'aperçu de la facture
+            function updateInvoicePreview() {
+                // Mettre à jour les informations de l'entreprise
+                document.getElementById('previewCompanyName').textContent = document.getElementById('companyName').value || 'Nom de l\'entreprise';
+                document.getElementById('previewCompanyAddress').textContent = document.getElementById('companyAddress').value || 'Adresse de l\'entreprise';
+                document.getElementById('previewCompanyPhone').textContent = 'Téléphone: ' + (document.getElementById('companyPhone').value || '+225 XX XX XX XX');
+                document.getElementById('previewCompanyEmail').textContent = 'Email: ' + (document.getElementById('companyEmail').value || 'contact@example.com');
+                document.getElementById('previewCompanyWebsite').textContent = 'Site: ' + (document.getElementById('companyWebsite').value || 'www.example.com');
+                
+                // Mettre à jour les informations du client
+                document.getElementById('previewClientName').textContent = document.getElementById('clientName').value || 'Nom du client';
+                document.getElementById('previewClientAddress').textContent = document.getElementById('clientAddress').value || 'Adresse du client';
+                
+                // Mettre à jour les détails de la facture
+                document.getElementById('previewInvoiceNumber').textContent = document.getElementById('invoiceNumber').value || 'F2023-001';
+                
+                const invoiceDate = document.getElementById('invoiceDate').value;
+                if (invoiceDate) {
+                    const dateObj = new Date(invoiceDate);
+                    document.getElementById('previewInvoiceDate').textContent = dateObj.toLocaleDateString('fr-FR');
+                }
+                
+                // Mettre à jour les produits
+                const previewProducts = document.getElementById('previewProducts');
+                previewProducts.innerHTML = '';
+                
+                if (products.length === 0) {
+                    previewProducts.innerHTML = '<tr><td colspan="4" style="text-align: center;">Aucun produit ajouté</td></tr>';
+                } else {
+                    products.forEach(product => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${product.name}</td>
+                            <td>${product.quantity}</td>
+                            <td>${formatCurrency(product.price)}</td>
+                            <td>${formatCurrency(product.total)}</td>
+                        `;
+                        previewProducts.appendChild(row);
+                    });
+                }
+                
+                // Calculer et mettre à jour les totaux
+                const subtotal = products.reduce((sum, product) => sum + product.total, 0);
+                const total = subtotal;
+                const amountPaid = parseFloat(document.getElementById('amountPaid').value) || 0;
+                const change = amountPaid - total;
+                
+                document.getElementById('previewSubtotal').textContent = formatCurrency(subtotal);
+                document.getElementById('previewTotal').textContent = formatCurrency(total);
+                document.getElementById('previewAmountPaid').textContent = formatCurrency(amountPaid);
+                document.getElementById('previewChange').textContent = formatCurrency(change);
+                
+                // Mettre à jour le pied de page
+                document.getElementById('previewFooterPhone').textContent = document.getElementById('companyPhone').value || '+225 XX XX XX XX';
+            }
+
+            // Écouter les changements dans les champs de formulaire
+            const formInputs = document.querySelectorAll('.input-section input, .input-section textarea');
+            formInputs.forEach(input => {
+                input.addEventListener('input', updateInvoicePreview);
+            });
+
+            // Générer le PDF
+            document.getElementById('generateInvoice').addEventListener('click', function() {
+                // Valider les champs requis
+                if (!document.getElementById('companyName').value || 
+                    !document.getElementById('companyAddress').value || 
+                    !document.getElementById('companyPhone').value || 
+                    !document.getElementById('clientName').value || 
+                    !document.getElementById('invoiceNumber').value || 
+                    !document.getElementById('invoiceDate').value) {
+                    alert('Veuillez remplir tous les champs obligatoires (*)');
+                    return;
+                }
+                
+                if (products.length === 0) {
+                    alert('Veuillez ajouter au moins un produit');
+                    return;
+                }
+                
+                // Afficher le message de chargement
+                document.getElementById('loadingMessage').style.display = 'block';
+                
+                // Utiliser setTimeout pour permettre à l'UI de se mettre à jour avant la génération du PDF
+                setTimeout(generatePDF, 100);
+            });
+
+            // Fonction pour générer le PDF avec plusieurs pages si nécessaire
+            function generatePDF() {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Récupérer les données du formulaire
+                const companyName = document.getElementById('companyName').value;
+                const companyAddress = document.getElementById('companyAddress').value;
+                const companyPhone = document.getElementById('companyPhone').value;
+                const companyEmail = document.getElementById('companyEmail').value;
+                const companyWebsite = document.getElementById('companyWebsite').value;
+                const clientName = document.getElementById('clientName').value;
+                const clientAddress = document.getElementById('clientAddress').value;
+                const invoiceNumber = document.getElementById('invoiceNumber').value;
+                const invoiceDate = new Date(document.getElementById('invoiceDate').value).toLocaleDateString('fr-FR');
+                const amountPaid = parseFloat(document.getElementById('amountPaid').value) || 0;
+                
+                // Calculer les totaux
+                const subtotal = products.reduce((sum, product) => sum + product.total, 0);
+                const total = subtotal;
+                const change = amountPaid - total;
+                
+                // Configuration
+                const margin = 14;
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const contentWidth = pageWidth - 2 * margin;
+                let yPosition = margin;
+                
+                // Fonction pour ajouter du texte avec gestion des sauts de ligne
+                function addText(text, x, y, maxWidth, lineHeight = 7) {
+                    if (!text) return y;
+                    
+                    const lines = doc.splitTextToSize(text, maxWidth);
+                    doc.text(lines, x, y);
+                    return y + (lines.length * lineHeight);
+                }
+                
+                // Fonction pour ajouter une nouvelle page si nécessaire
+                function checkPageHeight(y, lineHeight = 10) {
+                    if (y > doc.internal.pageSize.getHeight() - margin - lineHeight) {
+                        doc.addPage();
+                        return margin;
+                    }
+                    return y;
+                }
+                
+                // En-tête de la facture
+                yPosition = checkPageHeight(yPosition);
+                
+                // Logo et informations de l'entreprise
+                if (companyLogo) {
+                    try {
+                        doc.addImage(companyLogo, 'JPEG', margin, yPosition, 30, 30);
+                    } catch (e) {
+                        console.error("Erreur lors du chargement de l'image:", e);
+                    }
+                    yPosition = addText(companyName, margin + 35, yPosition + 10, contentWidth - 35);
+                } else {
+                    yPosition = addText(companyName, margin, yPosition, contentWidth);
+                }
+                
+                yPosition = addText(companyAddress, margin, yPosition, contentWidth);
+                yPosition = addText(`Téléphone: ${companyPhone}`, margin, yPosition, contentWidth);
+                if (companyEmail) yPosition = addText(`Email: ${companyEmail}`, margin, yPosition, contentWidth);
+                if (companyWebsite) yPosition = addText(`Site: ${companyWebsite}`, margin, yPosition, contentWidth);
+                
+                yPosition += 10;
+                yPosition = checkPageHeight(yPosition);
+                
+                // Titre de la facture
+                doc.setFontSize(20);
+                doc.text('FACTURE', pageWidth / 2, yPosition, { align: 'center' });
+                yPosition += 10;
+                doc.setFontSize(12);
+                doc.text(`N°: ${invoiceNumber}`, pageWidth / 2, yPosition, { align: 'center' });
+                yPosition += 7;
+                doc.text(`Date: ${invoiceDate}`, pageWidth / 2, yPosition, { align: 'center' });
+                yPosition += 15;
+                
+                // Informations du client
+                yPosition = checkPageHeight(yPosition);
+                doc.setFontSize(14);
+                doc.text('Client:', margin, yPosition);
+                yPosition += 7;
+                doc.setFontSize(12);
+                yPosition = addText(clientName, margin, yPosition, contentWidth);
+                if (clientAddress) yPosition = addText(clientAddress, margin, yPosition, contentWidth);
+                
+                yPosition += 10;
+                yPosition = checkPageHeight(yPosition);
+                
+                // Tableau des produits
+                doc.setFontSize(14);
+                doc.text('Détails des produits:', margin, yPosition);
+                yPosition += 10;
+                
+                // En-têtes du tableau
+                const colWidths = [contentWidth * 0.5, contentWidth * 0.15, contentWidth * 0.15, contentWidth * 0.2];
+                const tableHeaders = ['Description', 'Quantité', 'Prix Unitaire', 'Total'];
+                
+                doc.setFillColor(240, 240, 240);
+                doc.rect(margin, yPosition, contentWidth, 10, 'F');
+                doc.setFontSize(12);
+                doc.setFont(undefined, 'bold');
+                
+                let x = margin;
+                for (let i = 0; i < tableHeaders.length; i++) {
+                    doc.text(tableHeaders[i], x + 2, yPosition + 7);
+                    x += colWidths[i];
+                }
+                
+                yPosition += 10;
+                doc.setFont(undefined, 'normal');
+                
+                // Lignes des produits
+                for (let i = 0; i < products.length; i++) {
+                    yPosition = checkPageHeight(yPosition, 20);
+                    if (yPosition === margin) {
+                        // Nouvelle page, réafficher les en-têtes
+                        doc.setFillColor(240, 240, 240);
+                        doc.rect(margin, yPosition, contentWidth, 10, 'F');
+                        doc.setFont(undefined, 'bold');
+                        
+                        x = margin;
+                        for (let j = 0; j < tableHeaders.length; j++) {
+                            doc.text(tableHeaders[j], x + 2, yPosition + 7);
+                            x += colWidths[j];
+                        }
+                        
+                        yPosition += 10;
+                        doc.setFont(undefined, 'normal');
+                    }
+                    
+                    const product = products[i];
+                    const lines = doc.splitTextToSize(product.name, colWidths[0] - 4);
+                    const lineHeight = 7;
+                    const rowHeight = Math.max(10, lines.length * lineHeight);
+                    
+                    // Dessiner les bordures de la ligne
+                    doc.rect(margin, yPosition, contentWidth, rowHeight);
+                    
+                    // Description
+                    doc.text(lines, margin + 2, yPosition + 5);
+                    
+                    // Quantité
+                    doc.text(product.quantity.toString(), margin + colWidths[0] + 2, yPosition + 5);
+                    
+                    // Prix Unitaire
+                    doc.text(formatCurrency(product.price), margin + colWidths[0] + colWidths[1] + 2, yPosition + 5);
+                    
+                    // Total
+                    doc.text(formatCurrency(product.total), margin + colWidths[0] + colWidths[1] + colWidths[2] + 2, yPosition + 5);
+                    
+                    yPosition += rowHeight;
+                }
+                
+                yPosition += 10;
+                yPosition = checkPageHeight(yPosition);
+                
+                // Totaux
+                doc.setFontSize(12);
+                doc.text(`Sous-total: ${formatCurrency(subtotal)}`, margin + contentWidth - 60, yPosition, { align: 'right' });
+                yPosition += 7;
+                doc.text(`Total: ${formatCurrency(total)}`, margin + contentWidth - 60, yPosition, { align: 'right' });
+                yPosition += 7;
+                doc.text(`Montant payé: ${formatCurrency(amountPaid)}`, margin + contentWidth - 60, yPosition, { align: 'right' });
+                yPosition += 7;
+                doc.setFont(undefined, 'bold');
+                doc.text(`Monnaie à rendre: ${formatCurrency(change)}`, margin + contentWidth - 60, yPosition, { align: 'right' });
+                yPosition += 15;
+                
+                // Informations de paiement
+                yPosition = checkPageHeight(yPosition);
+                doc.setFont(undefined, 'normal');
+                doc.text(`Mode de paiement: Espèces`, margin, yPosition);
+                yPosition += 10;
+                
+                // QR Code (espace réservé)
+                yPosition = checkPageHeight(yPosition, 50);
+                doc.setFillColor(240, 240, 240);
+                doc.rect(margin, yPosition, 40, 40, 'F');
+                doc.setFontSize(10);
+                doc.text('QR Code', margin + 5, yPosition + 25, { align: 'center' });
+                doc.text('pour le site web', margin + 5, yPosition + 32, { align: 'center' });
+                
+                doc.text('Scannez pour visiter notre site web', margin + 50, yPosition + 20);
+                
+                yPosition += 50;
+                yPosition = checkPageHeight(yPosition);
+                
+                // Pied de page
+                doc.setFontSize(10);
+                doc.text('Merci pour votre confiance !', pageWidth / 2, yPosition, { align: 'center' });
+                yPosition += 5;
+                doc.text(`Pour toute question, contactez-nous à ${companyPhone}`, pageWidth / 2, yPosition, { align: 'center' });
+                yPosition += 5;
+                doc.text('facture by ForceConnect', pageWidth / 2, yPosition, { align: 'center' });
+                
+                // Sauvegarder le PDF
+                doc.save(`Facture_${invoiceNumber}.pdf`);
+                
+                // Cacher le message de chargement
+                document.getElementById('loadingMessage').style.display = 'none';
+            }
+
+            // Réinitialiser le formulaire
+            document.getElementById('resetForm').addEventListener('click', function() {
+                if (confirm('Êtes-vous sûr de vouloir réinitialiser le formulaire ? Toutes les données seront perdues.')) {
+                    document.querySelectorAll('.input-section input, .input-section textarea').forEach(input => {
+                        input.value = '';
+                    });
+                    
+                    // Réinitialiser la date du jour
+                    document.getElementById('invoiceDate').value = new Date().toISOString().substr(0, 10);
+                    
+                    // Réinitialiser les produits
+                    products = [];
+                    updateProductList();
+                    
+                    // Réinitialiser le logo
+                    companyLogo = null;
+                    document.getElementById('logoPreview').style.display = 'none';
+                    document.getElementById('previewLogo').style.display = 'none';
+                    document.getElementById('companyLogo').value = '';
+                    
+                    // Mettre à jour l'aperçu
+                    updateInvoicePreview();
+                }
+            });
+
+            // Initialiser l'aperçu
+            updateInvoicePreview();
+        });
+    </script>
+</body>
+</html>
